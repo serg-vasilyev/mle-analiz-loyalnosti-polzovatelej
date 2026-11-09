@@ -81,7 +81,7 @@ class DataProcessor:
         # Загрузка файла с курсами валют тенге
     def load_tenge_csv(self, file_name, folder_name='data'):
         self.tenge_rate_df = pd.read_csv(
-            f'{self.project_root} / {folder_name} / {file_name}')
+            f'{self.project_root}/{folder_name}/{file_name}')
 
     # load_tenge_csv(file_name='final_tickets_tenge_df.csv') folder_name='data' по умолчанию
 
