@@ -41,7 +41,7 @@ def main():
     # Загрузка данных о курсе тенге
     # folder_name='data' по умолчанию
     process.load_tenge_csv(file_name='final_tickets_tenge_df.csv')
-
+    
     # Посмотрим на содержимое датасета
     process.check_data()
 
@@ -54,7 +54,7 @@ def main():
                             revenue_col='revenue',
                             nominal='nominal',
                             rate='curs',
-                            currency_code='currency_code'.
+                            currency_code='currency_code',
                             code='kzt')
 
     # Проверка провусков
@@ -65,47 +65,49 @@ def main():
                          cols_float=['days_since_prev'])
 
     # Проверка дубликатов
-    process.duplicates_check (cols=["order_id", "service_name"]) #keep = 'first' по умолчанию
+    # keep = 'first' по умолчанию
+    process.duplicates_check(cols=["order_id", "service_name"])
 
     # Приведение к нижнему регистру столбцов со строками
     process.lower_register(cols=['service_name', 'region_name', 'city_name'])
 
     # Проверка неявных дубликатов
-    process.duplicates_check (cols=["order_id", "service_name"])
+    process.duplicates_check(cols=["order_id", "service_name"])
 
     # Проверка неявных дубликатов в связке с user_id
-    process.duplicates_check (cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"], 
-                              keep=False)
+    process.duplicates_check(cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
+                             keep=False)
 
     # Вывод на экран неявных дублткатов
-    process.show_duplicates(cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"], 
-                            keep=False, sort_cols='user_id') # sort_cols=None, ascending=True по умолчанию
+    process.show_duplicates(cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
+                            keep=False, sort_cols='user_id')  # sort_cols=None, ascending=True по умолчанию
 
     # Удаление дубликатов
-    process.delete_duplicates(cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"], 
-                              sort_cols='days_since_prev', 
-                              ascending=False) # sort_cols=None, ascending=True, keep='first' по умолчанию
+    process.delete_duplicates(cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
+                              sort_cols='days_since_prev',
+                              ascending=False)  # sort_cols=None, ascending=True, keep='first' по умолчанию
 
     # Проверка корректности удаления дубликатов
-    process.duplicates_check (cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"])
+    process.duplicates_check(
+        cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"])
 
     # Вывод информации по столбцам object
-    process.obj_info(cols=['device_type_canonical', 'event_type_main'], 
-                     cols_top_tail = ['user_id', 'event_name', 'service_name', 'region_name', 'city_name'])
+    process.obj_info(cols=['device_type_canonical', 'event_type_main'],
+                     cols_top_tail=['user_id', 'event_name', 'service_name', 'region_name', 'city_name'])
 
     # Вывод инфо по числовым столбцам с гистограммами и боксплотами
-    process.fig_info(cols=['tickets_count', 'days_since_prev', 'revenue_rub'], 
-                     sub_plot_size = 6,1) # edgecolor='white', color='skyblue'
+    process.fig_info(cols=['tickets_count', 'days_since_prev', 'revenue_rub'],
+                     sub_plot_size=(6, 1))  # edgecolor='white', color='skyblue'
 
     # Фильтрация по 99му процентилю
     process.filtration(cols='revenue_rub', quant=0.99)
 
     # вывод гистограммы и boxplot для выручки после фильтрации
-    process.fig_info(cols='revenue_rub', 
-                     sub_plot_size = 1,2) # edgecolor='white', color='skyblue'
+    process.fig_info(cols='revenue_rub',
+                     sub_plot_size=(1, 2))  # edgecolor='white', color='skyblue'
 
     # Вывод столбчатой диаграммы для tickets_count
-    process.bar_plot(col='tickets_count') # edgecolor='white', color='skyblue'
+    process.bar_plot(col='tickets_count')  # edgecolor='white', color='skyblue'
 
     # Подсчеты отрицательной выручки
     process.neg_revenue_info(col='revenue_rub')
@@ -117,7 +119,9 @@ def main():
     process.cnt_df_after_filt()
 
     # вывод гистограммы после фильтрации по отрицательным числам
-    process.fig_info(cols='revenue_rub', sub_plot_size = 1,2) edgecolor='white', color='skyblue
+    process.fig_info(cols='revenue_rub', sub_plot_size=(1, 2)
+                     )  # edgecolor='white', color='skyblue
+
 
 # вызов функции:
 if __name__ == "__main__":
