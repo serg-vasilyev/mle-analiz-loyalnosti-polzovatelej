@@ -265,13 +265,12 @@ class DataProcessor:
                 print(f'последние 5 {col}:')
                 print(self.df[col].value_counts().tail(5))
 
-    def fig_info(self, cols, sub_plot_size, edgecolor='white', color='skyblue'):
+    def fig_info(self, cols, rows, graph_cols, edgecolor='white', color='skyblue'):
 
         # Теперь посмотрим на числовые значения и проверим выбросы, с построением гистограмм и боксплотов
         self.df.describe()
 
-        fig, axes = plt.subplots(sub_plot_size, figsize=(
-            14, 22), constrained_layout=True)
+        fig, axes = plt.subplots(rows, graph_cols, figsize=(14, 22), constrained_layout=True)
 
         for i, (name, values) in enumerate(self.df[cols].items()):
             hist_idx = 2 * i
