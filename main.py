@@ -96,17 +96,13 @@ def main():
                      cols_top_tail=['user_id', 'event_name', 'service_name', 'region_name', 'city_name'])
 
     # Вывод инфо по числовым столбцам с гистограммами и боксплотами
-    process.fig_info(cols=['tickets_count', 'days_since_prev', 'revenue_rub'],
-                     rows=6, 
-                     graph_cols=1)  # edgecolor='white', color='skyblue'
+    process.fig_info(cols=['tickets_count', 'days_since_prev', 'revenue_rub']) # edgecolor='white', color='skyblue'
 
     # Фильтрация по 99му процентилю
     process.filtration(cols='revenue_rub', quant=0.99)
 
     # вывод гистограммы и boxplot для выручки после фильтрации
-    process.fig_info(cols='revenue_rub',
-                     rows=1, 
-                     graph_cols=2)  # edgecolor='white', color='skyblue'
+    process.fig_info(cols='revenue_rub')  # edgecolor='white', color='skyblue'
 
     # Вывод столбчатой диаграммы для tickets_count
     process.bar_plot(col='tickets_count')  # edgecolor='white', color='skyblue'
@@ -121,7 +117,7 @@ def main():
     process.cnt_df_after_filt()
 
     # вывод гистограммы после фильтрации по отрицательным числам
-    process.fig_info(cols='revenue_rub', rows=1, graph_cols=2)  # edgecolor='white', color='skyblue
+    process.fig_info(cols='revenue_rub')  # edgecolor='white', color='skyblue
 
 
 # вызов функции:
