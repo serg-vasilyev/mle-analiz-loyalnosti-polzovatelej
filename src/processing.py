@@ -24,6 +24,7 @@ class DataProcessor:
         self.db = None
         self.project_root = None
         self.tenge_rate_df = None
+        self.user_profile = None
 
     # Создаем метод для выгрузки данных из БД и сохранение в csv
     def load_db(self, query, csv_name, folder_name='data'):
@@ -81,7 +82,8 @@ class DataProcessor:
         # Загрузка файла с курсами валют тенге
     def load_tenge_csv(self, file_name, folder_name='data'):
         self.tenge_rate_df = pd.read_csv(
-            f'{self.project_root}/{folder_name}/{file_name}')
+            f'{self.project_root}/{folder_name}/{file_name}'
+            )
 
     # load_tenge_csv(file_name='final_tickets_tenge_df.csv') folder_name='data' по умолчанию
 
@@ -115,11 +117,14 @@ class DataProcessor:
         # Переведем столбец data из типа object в тип datetime
 
         self.tenge_rate_df[tenge_date] = pd.to_datetime(
-            self.tenge_rate_df[tenge_date])
+            self.tenge_rate_df[tenge_date]
+            )
 
         # Временно соединим датасет с датасетом курса тенге для корректного перевода в рубли, после удалим лишние столбцы
-        self.df = pd.merge(self.df, self.tenge_rate_df,
-                           left_on=period_col, right_on=tenge_date, how='inner')
+        self.df = pd.merge(
+            self.df, self.tenge_rate_df,
+            left_on=period_col, right_on=tenge_date, how='inner'
+            )
 
         # Проверим соединение
         print('\nПрверка соединения:')
@@ -131,7 +136,15 @@ class DataProcessor:
 
     # -> tenge_conv_merge(period_col = 'order_dt') tenge_date = 'data' по умолчанию
 
-    def tenge_conv_proc(self, new_col, revenue_col, nominal, rate, currency_code, code):
+    def tenge_conv_proc(
+            self, 
+            new_col, 
+            revenue_col, 
+            nominal, rate, 
+            currency_code, 
+            code
+            ):
+        
         # Создаем столбец с рублями
         self.df[new_col] = np.where(
             self.df[currency_code] == code,
@@ -142,8 +155,10 @@ class DataProcessor:
         print('\nвесь датасет после конвериации:')
         print(self.df[[currency_code, revenue_col, new_col]])
         print('\nвалюта kzt:')
-        print(self.df[[currency_code, revenue_col, self.period_col,
-              rate, new_col]].loc[self.df[currency_code] == code])
+        print(
+            self.df[[currency_code, revenue_col, self.period_col,
+            rate, new_col]].loc[self.df[currency_code] == code]
+            )
 
         # Удаление столбцов
         self.df = self.df.drop(columns=[self.tenge_date, nominal, rate, 'cdx'])
@@ -151,8 +166,7 @@ class DataProcessor:
         print('\nПроверка после удаления:')
         print(self.df.info())
 
-        # tenge_conv_proc(new_col='revenue_rub, revenue_col='revenue', nominal='nominal', rate='curs', currency_code='currency_code'. code='kzt')
-
+    # Поиск пропусков
     def nulls(self):
 
         # подсчет пропусков
@@ -165,6 +179,7 @@ class DataProcessor:
         # nulls()
 
     def optimization(self, cols_int, cols_float):
+        
         # оптимизируем столбцы с целочисленными значениями
         for col in cols_int:
             self.df[col] = pd.to_numeric(self.df[col], downcast='integer')
@@ -184,7 +199,9 @@ class DataProcessor:
         print(f'\nДубликаты в датафрейме: {self.df.duplicated().sum()}')
 
         # проверим столбец order_id на дубликаты
-        print(f'\nЯвные/неявные дубликаты в столбце/столбцах {cols}: {self.df.duplicated(subset=cols, keep=keep).sum()}')
+        print(
+            f'\nЯвные/неявные дубликаты в столбце/столбцах {cols}: {self.df.duplicated(subset=cols, keep=keep).sum()}'
+            )
 
         # duplicates_check (cols=["order_id", "service_name"])
 
@@ -198,21 +215,34 @@ class DataProcessor:
 
         # lower_register(cols=['service_name', 'region_name', 'city_name'])
 
-    def show_duplicates(self, cols, keep='first', sort_cols=None, ascending=True):
+    def show_duplicates(
+            self, 
+            cols, 
+            keep='first', 
+            sort_cols=None, 
+            ascending=True
+            ):
+        
         # Выведем эти строки
         print('\nЯвные/неявные дубликаты в столбце/столбцах {cols}:')
         pd.set_option('display.max_rows', None)
         duplicated_df = self.df[self.df.duplicated(
             subset=cols,
             keep=keep)
-            ]
+        ]
 
         if sort_cols is not None:
             duplicated_df.sort_values(sort_cols, ascending=ascending)
         print(duplicated_df)
         return duplicated_df
 
-    def delete_duplicates(self, cols, sort_cols=None, ascending=True, keep='first'):
+    def delete_duplicates(
+            self, 
+            cols, 
+            sort_cols=None, 
+            ascending=True, 
+            keep='first'):
+        
         # Зафиксируем начальное количество строк
         self.rows_before = self.df.shape[0]
 
@@ -231,6 +261,7 @@ class DataProcessor:
         if sort_cols is not None:
             df_processed = df_processed.sort_values(
                 by=sort_cols, ascending=ascending)
+        
         df_processed = df_processed.drop_duplicates(
             subset=cols,
             keep=keep
@@ -243,9 +274,11 @@ class DataProcessor:
 
         # Посчитаем сколько строк удалено
         print(
-            f'\nКоличество удаленных строк: {self.rows_before - self.df.shape[0]}')
+            f'\nКоличество удаленных строк: {self.rows_before - self.df.shape[0]}'
+            )
         print(
-            f'\nКоличество удаленных строк в процентах: {((self.rows_before - self.df.shape[0]) / self.rows_before):.2%}')
+            f'\nКоличество удаленных строк в процентах: {((self.rows_before - self.df.shape[0]) / self.rows_before):.2%}'
+            )
 
     def obj_info(self, cols=None, cols_top_tail=None):
 
@@ -279,7 +312,8 @@ class DataProcessor:
 
         for name in cols:
             fig, (ax_hist, ax_box) = plt.subplots(
-                1, 2, figsize=(14, 6), constrained_layout=True)
+                1, 2, figsize=(14, 6), constrained_layout=True
+                )
 
             sns.histplot(data=self.df,
                          x=name,
@@ -310,19 +344,21 @@ class DataProcessor:
         quantile_quant = self.df[cols].quantile(quant)
         self.df = self.df.loc[self.df[cols] <= quantile_quant]
 
-        print(f'\nОтфильтровано по {quant} квантилю: {len_before_filt - self.df.shape[0]}')
+        print(
+            f'\nОтфильтровано по {quant} квантилю: {len_before_filt - self.df.shape[0]}')
         print(
             f'\nв процентах: {((len_before_filt - self.df.shape[0]) / len_before_filt):.2%}')
 
     def bar_plot(self, col, edgecolor='white', color='skyblue'):
         plt.figure(figsize=(14, 6))
 
-        self.df[col].value_counts().plot(kind='bar',
-                                         x=col,
-                                         rot=0,
-                                         edgecolor=edgecolor,
-                                         color=color
-                                         )
+        self.df[col].value_counts().plot(
+            kind='bar',
+            x=col,
+            rot=0,
+            edgecolor=edgecolor,
+            color=color
+            )
 
         plt.title(f'Распределение данных в столбце {col}')
         plt.xlabel({col})
@@ -334,17 +370,164 @@ class DataProcessor:
 
         # разберемся с отрицательной выручкой
         print(
-            f'\nКоличество отрицательной и нулевой выручки: {self.df.loc[self.df[col] <= 0].shape[0]}')
+            f'\nКоличество отрицательной и нулевой выручки: {self.df.loc[self.df[col] <= 0].shape[0]}'
+            )
         print(
-            f'\nв процентах: {((self.df.loc[self.df[col] <= 0].shape[0]) / self.df.shape[0]):.4%}')
+            f'\nв процентах: {((self.df.loc[self.df[col] <= 0].shape[0]) / self.df.shape[0]):.4%}'
+            )
 
     def neg_revenue_filt(self, col):
         self.df = self.df.loc[self.df[col] > 0]
         print(
-            f'\nколичество удаленных строк включая дубликаты: {self.rows_before - self.df.shape[0]}')
+            f'\nколичество удаленных строк включая дубликаты: {self.rows_before - self.df.shape[0]}'
+            )
         print(
-            f'\nколичество удаленных строк в процентах: {((self.rows_before - self.df.shape[0]) / self.rows_before):.4%}')
+            f'\nколичество удаленных строк в процентах: {((self.rows_before - self.df.shape[0]) / self.rows_before):.4%}'
+            )
 
     def cnt_df_after_filt(self):
         print(
-            f'\nКоличество строк в предобработанном датафрейме: {self.df.shape[0]}')
+            f'\nКоличество строк в предобработанном датафрейме: {self.df.shape[0]}'
+            )
+
+
+# СОЗДАНИЕ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ
+
+
+    def user_profile_create(
+            self,
+            sort_cols,
+            group_cols,
+            binary_col_name,
+            col_for_binary,
+            **kwargs
+    ):
+
+        # Сортируем датафрейм
+        df_sorted = self.df.sort_values(sort_cols)
+
+        # Создаем профиль
+        self.user_profile = df_sorted.groupby(group_cols).agg(
+            **{name: (col, op) for name, (col, op) in kwargs.items()}
+        )
+
+        # Добавляем бинарный столбец для пользователей сделавших более 2х заказов
+        self.user_profile[binary_col_name] = (
+            self.user_profile[col_for_binary] >= 2
+            ).astype(int)
+
+        print('\nПрофиль пользователя:')
+        print(self.user_profile.head(10))
+
+    # Поиск аномалий
+    def anomaly_check(self, mean_col, binary_col, info_cols, edgecolor='white', color='skyblue'):
+
+        print(
+            f'\nобщее число пользователей в выборке: {self.user_profile.shape[0]}'
+            )
+        print(
+            f'\nсредняя выручка с одного заказа: {self.user_profile[mean_col].mean(): .2f}'
+            )
+        print(
+            f'\nдоля пользователей, совершивших 2 и более заказа: {self.user_profile[binary_col].mean(): .2%}'
+            )
+
+        print(f'\nСтатистические показатели {info_cols}:')
+        print(self.user_profile[info_cols].describe())
+
+    # Построим гиcтограммы и боксплоты для статистических данных
+
+    def analytic_hist_box_plot(self, cols, edgecolor='white', color='skyblue'):
+        if isinstance(cols, str):
+            cols = [cols]
+
+        for name in cols:
+            fig, (ax_hist, ax_box) = plt.subplots(
+                1, 2, figsize=(14, 6), constrained_layout=True
+                )
+
+            sns.histplot(
+                data=self.user_profile,
+                x=name,
+                bins=60,
+                kde=True,
+                ax=ax_hist,
+                edgecolor=edgecolor,
+                color=color
+                )
+
+            ax_hist.set_title(f'Гистограмма для {name}')
+            ax_hist.set_ylabel('Частота')
+            ax_hist.grid(axis='y')
+
+            sns.boxplot(data=self.user_profile, y=name, ax=ax_box, color=color)
+            ax_box.set_title(f'Boxplot для {name}')
+            ax_box.grid(axis='y')
+
+        plt.suptitle(f'\nРаспределение данных в столбцах {cols}')
+        plt.show()
+
+    # Проверка количества строк для удаления по столбцам и квантилям на выбор пользователя
+    def analytic_before_filt_check(self, cols=None, quants=None):
+        cols = cols or []
+        quants = quants or []
+
+        if not cols or not quants:
+            print('Не указаны столбцы или квантили для расчета')
+
+        # Зафиксируем количество строк до фильтрации
+        self.user_before = self.user_profile.shape[0]
+        print(
+            f'\nКоличество строк до фильтрации df user_profile: {self.user_before}'
+            )
+
+        # Перебор квантилей и колонок для расчетов, вывод того, что доступно
+        for q_val in quants:
+            print(f'\n---Расчет для квантиля {q_val} ---')
+
+            for col_name in cols:
+                if col_name is None:
+                    continue
+                quant_calc = self.user_profile[col_name].quantile(q_val)
+                print(f'{q_val} квантиль для {col_name}: {quant_calc}')
+
+                to_del = self.user_profile.loc[self.user_profile[col_name] >= quant_calc]
+                del_count = to_del.shape[0]
+                print(
+                    f'количество строк более {q_val} для {col_name}: {del_count}'
+                    )
+
+                del_share = del_count / self.user_before
+                print(
+                    f'Доля строк по {col_name} для удаления: {del_share: .2%}'
+                    )
+                print()
+
+    # Фильтрация
+    def analytic_filt(self, cols, quant):
+        quantiles = self.user_profile[cols].quantile(quant)
+
+        final_mask = pd.Series(True, index=self.user_profile.index)
+
+        for col in cols:
+            q_val = quantiles[col]
+            mask = self.user_profile[col] <= q_val
+            if col == 'avg_time_between_orders':
+                mask = mask | self.user_profile[col].isna()
+
+            final_mask &= mask
+
+        self.user_profile = self.user_profile.loc[final_mask]
+
+        print(
+            f'количество отфильтрованных строк: {self.user_before - self.user_profile.shape[0]}'
+            )
+        print(
+            f'Доля отфильтрованных строк: {((self.user_before - self.user_profile.shape[0]) / self.user_before): .2%}'
+            )
+        print()
+
+        # изменение после фильтрации
+        print('изменения после филбтрации:')
+        print(self.user_profile.describe())
+        print()
