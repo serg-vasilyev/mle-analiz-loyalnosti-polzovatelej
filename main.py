@@ -57,7 +57,7 @@ def main():
         rate='curs',
         currency_code='currency_code',
         code='kzt'
-        )
+    )
 
     # Проверка провусков
     process.nulls()
@@ -66,7 +66,7 @@ def main():
     process.optimization(
         cols_int=['order_id', 'tickets_count', 'event_id'],
         cols_float=['days_since_prev']
-        )
+    )
 
     # Проверка дубликатов
     # keep = 'first' по умолчанию
@@ -82,31 +82,32 @@ def main():
     process.duplicates_check(
         cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
         keep=False
-        )
+    )
 
     # Вывод на экран неявных дублткатов
     process.show_duplicates(
         cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
         keep=False, sort_cols='user_id'
-        )  # sort_cols=None, ascending=True по умолчанию
+    )  # sort_cols=None, ascending=True по умолчанию
 
     # Удаление дубликатов
     process.delete_duplicates(
         cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
         sort_cols='days_since_prev',
         ascending=False
-        )  # sort_cols=None, ascending=True, keep='first' по умолчанию
+    )  # sort_cols=None, ascending=True, keep='first' по умолчанию
 
     # Проверка корректности удаления дубликатов
     process.duplicates_check(
         cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"]
-        )
+    )
 
     # Вывод информации по столбцам object
     process.obj_info(
         cols=['device_type_canonical', 'event_type_main'],
-        cols_top_tail=['user_id', 'event_name', 'service_name', 'region_name', 'city_name']
-        )
+        cols_top_tail=['user_id', 'event_name',
+                       'service_name', 'region_name', 'city_name']
+    )
 
     # Вывод инфо по числовым столбцам с гистограммами и боксплотами
     # edgecolor='white', color='skyblue'
@@ -160,24 +161,89 @@ def main():
     # edgecolor = 'white', color = 'skyblue'
     process.analytic_hist_box_plot(
         cols=['total_orders', 'avg_time_between_orders']
-        )
+    )
 
     # Проверяем 99 и 95 процентиль
     process.analytic_before_filt_check(
         cols=['total_orders', 'avg_time_between_orders'],
         quants=[0.99, 0.95]
-        )  # по умолчанию столбцы и квантили None
+    )  # по умолчанию столбцы и квантили None
 
     # Фильтрация
     process.analytic_filt(
         cols=['total_orders', 'avg_time_between_orders'], quant=0.99
-        )
+    )
 
     # строим гистограмму и boxplot для total_orders, avg_time_between_orders после фильтрации
     # edgecolor = 'white', color = 'skyblue'
     process.analytic_hist_box_plot(
         cols=['total_orders', 'avg_time_between_orders']
-        )
+    )
+
+# ИССЛЕДОВАТЕЛЬСКИЙ АНАЛИХ ДАННЫХ
+
+    # Распределение пользователей по признакам
+    process.users_by_cat(
+        cols=['first_event_type', 'first_device', 'first_region']
+    )
+
+    # ber_plots
+    process.user_cat_bar_plot(
+        cols=['first_event_type', 'first_device', 'first_region']
+    )  # По умолчанию edgecolor='black'
+
+    # Анализ возврата с построением bar plots и линии общей средней
+    process.return_analysis(
+        binary_col='is_two',
+        cat_cols=['first_event_type', 'first_device', 'first_region'],
+        cnt_col='first_region'
+    )  # linecolor='magenta',linestyle='--',linewidth=2
+
+    # Проверка продуктовых гипотез
+    # Гипотеза 1
+    process.compare_type(
+        col='first_event_type',
+        name_1='спорт',
+        name_2='концерты',
+        binary_col='is_two'
+    )
+    # Гипотеза 2
+    process.compare_region(
+        col='first_region',
+        binary_col='is_two',
+        agg_func=['count', 'mean'],
+        sort_col='count'
+    )  # linecolor='red', linewidth=2, marker='o'
+
+    # Выручка и состав заказа
+
+    process.return_revenue(
+        col='avg_revenue',
+        group_col='is_two',
+        agg_list=['sum', 'min', 'max', 'mean', 'median']
+    )
+
+    # Временные характеристики
+
+    process.time_char(
+        new_col='week_day',
+        date_col='first_order',
+        binary_col='is_two',
+        agg_list=['count', 'mean'],
+        sort_col='count'
+    )
+
+    # Корреляция
+
+    process.corr(
+        interval_cols=['total_orders', 'avg_revenue',
+                       'avg_time_between_orders'],
+        col='total_orders',
+        cols_for_scat_plot=['first_order', 'last_order']
+    )
+
+    # Проверка сезонности
+    process.season_check(col='order_dt')
 
 
 # вызов функции:
