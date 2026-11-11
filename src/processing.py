@@ -27,17 +27,21 @@ class DataProcessor:
         self.user_profile = None
 
     # Создаем метод для выгрузки данных из БД и сохранение в csv
+    # с сохранением в папку пользователя, по умолчанию 'data'
+    
     def load_db(self, query, csv_name, folder_name='data'):
 
         current_file_dir = find_dotenv()
 
         # Проверка наличия файла env
+    
         if not current_file_dir:
             raise FileNotFoundError(
                 'файл env в папке проекта отсутствует'
             )
 
         # Загрузка данных из env
+    
         load_dotenv(dotenv_path=current_file_dir, override=True)
 
         __db_user = os.getenv('DB_USER')
@@ -47,12 +51,14 @@ class DataProcessor:
         __db_name = os.getenv('DB_NAME')
 
         # Проверка на наличие данных в env
+    
         if not all([__db_user, __db_pwd, __db_host, __db_port, __db_name]):
             raise ValueError(
                 f'Ошибка: в файле env отсутствуют обязательные данные'
             )
 
         # Устанавливаем соединение с БД
+    
         connection_string = 'postgresql://{}:{}@{}:{}/{}'.format(
             __db_user,
             __db_pwd,
@@ -64,6 +70,7 @@ class DataProcessor:
         engine = create_engine(connection_string)
 
         # выгрузка данных из БД с проверкой
+    
         try:
             self.df = pd.read_sql_query(query, con=engine)
         except Exception as e:
@@ -75,21 +82,27 @@ class DataProcessor:
         csv_path = self.project_root / folder_name
 
         # Загрузка бд в файл в папке data
+    
         self.df.to_csv(csv_path / csv_name)
 
-        # load_db(query ='...', csv_name = 'afisha_db.csv') folder_name = 'data' по умолчанию
+    # вызов load_db(query ='...', csv_name = 'afisha_db.csv') 
 
-        # Загрузка файла с курсами валют тенге
+    # Загрузка файла с курсами валют тенге
+    # folder_name='data' по умолчанию
+    
     def load_tenge_csv(self, file_name, folder_name='data'):
         self.tenge_rate_df = pd.read_csv(
             f'{self.project_root}/{folder_name}/{file_name}'
         )
 
-    # load_tenge_csv(file_name='final_tickets_tenge_df.csv') folder_name='data' по умолчанию
+    # вызов load_tenge_csv(file_name='final_tickets_tenge_df.csv') 
 
+    # Метод для первого знвкомства с данными
+    
     def check_data(self):
 
         # Посмотрим на содержимое датасета
+    
         print('Первые 10 строк:')
         print(self.df.head(10))
         print('\nСлучайные 10 строк:')
@@ -98,44 +111,57 @@ class DataProcessor:
         print(self.df.tail(10))
 
         # Выведем основную информацию о датасете
+    
         print('\nИнформация по датасету:')
         print(self.df.info())
 
         # выыод на экран таблицы тенге
+    
         print('\nИнформация по таблице с тенге:')
         print(self.tenge_rate_df)
 
-        # check_data()
-
+    # вызов check_data()
+    
+    # Метод для соединения таблиц и проверки соединения
+    # tenge_date = 'data' по умолчанию
+    
     def tenge_conv_merge(self, period_col, tenge_date='data'):
         self.period_col = period_col
         self.tenge_date = tenge_date
 
         # Выведем период представленный в датасете для дальнейшей проверки корректности соединения таблиц
+    
         self.df[self.period_col].agg(['min', 'max'])
 
         # Переведем столбец data из типа object в тип datetime
-
+    
         self.tenge_rate_df[tenge_date] = pd.to_datetime(
             self.tenge_rate_df[tenge_date]
         )
 
         # Временно соединим датасет с датасетом курса тенге для корректного перевода в рубли, после удалим лишние столбцы
+    
         self.df = pd.merge(
             self.df, self.tenge_rate_df,
             left_on=period_col, right_on=tenge_date, how='inner'
         )
 
         # Проверим соединение
+    
         print('\nПрверка соединения:')
         print(self.df.info())
 
         # Проверка корректности периода
+    
         print('\nпроверка периода в новом присоединенном столбце:')
         print(self.df[tenge_date].agg(['min', 'max']))
 
-    # -> tenge_conv_merge(period_col = 'order_dt') tenge_date = 'data' по умолчанию
+    # вызов tenge_conv_merge(period_col = 'order_dt') 
 
+    # Метод для конвертации валют 
+    # с созданием нового столбца для валюты рубли
+    # и вывод результата для проверки
+    
     def tenge_conv_proc(
             self,
             new_col,
@@ -147,13 +173,14 @@ class DataProcessor:
     ):
 
         # Создаем столбец с рублями
+    
         self.df[new_col] = np.where(
             self.df[currency_code] == code,
             (self.df[revenue_col] / self.df[nominal]) * self.df[rate],
             self.df[revenue_col]
         )
 
-        print('\nвесь датасет после конвериации:')
+        print('\nвесь датасет после конвертации:')
         print(self.df[[currency_code, revenue_col, new_col]])
         print('\nвалюта kzt:')
         print(
@@ -161,62 +188,100 @@ class DataProcessor:
                      rate, new_col]].loc[self.df[currency_code] == code]
         )
 
+    # вызов tenge_conv_proc(
+    #         new_col='revenue_rub',
+    #         revenue_col='revenue',
+    #         nominal='nominal',
+    #         rate='curs',
+    #         currency_code='currency_code',
+    #         code='kzt'
+    #     )
+
+
+    # Удаление лишних столбцов и вывод для прверки корректности удаления 
+    
     def del_cols(self, del_cols):
-        
+
         # Удаление столбцов
+    
         self.df = self.df.drop(columns=del_cols)
 
         print('\nПроверка после удаления:')
         print(self.df.info())
 
-    # Поиск пропусков
+    # вызов del_cols(del_cols=['data', 'nominal', 'curs', 'cdx' ])
+    
+    
+    # Метод для поиска пропусков
+    
     def nulls(self):
 
         # подсчет пропусков
+    
         print('\nКоличество пропусков')
         print(self.df.isna().sum())
 
         print('\nпропуски в процентах:')
         print((self.df.isna().sum() / self.df.shape[0] * 100).round(2))
 
-        # nulls()
+    # вызов nulls()
 
-    def optimization(self, cols_int, cols_float):
+    # Метод для оптимизации разрядности данных.
+    # по умолчанию cols_int=None, cols_float=None
+    
+    def optimization(self, cols_int=None, cols_float=None):
 
         # оптимизируем столбцы с целочисленными значениями
-        for col in cols_int:
-            self.df[col] = pd.to_numeric(self.df[col], downcast='integer')
-
-        # оптимизируем столбец 'days_since_prev'
-        for col in cols_float:
-            self.df[col] = pd.to_numeric(self.df[col], downcast='float')
+    
+        if cols_int is not None:
+            for col in cols_int:
+                self.df[col] = pd.to_numeric(self.df[col], downcast='integer')
+        
+        # оптимизируем столбец float
+    
+        if cols_float is not None:
+           for col in cols_float:
+                self.df[col] = pd.to_numeric(self.df[col], downcast='float')
 
         print('\nПроверка оптимизации:')
         print(self.df.info())
 
-        # optimization(cols_int = ['order_id', 'tickets_count', 'event_id'], cols_float = ['days_since_prev'] )
+    # вызов optimization(
+    #           cols_int=['order_id', 'tickets_count', 'event_id'],
+    #           cols_float=['days_since_prev']
+    # )
+
+    # Метод для проверки дубликатов, по умолчанию keep='first' - первое вхождение не дубликат 
 
     def duplicates_check(self, cols, keep='first'):
 
         # проверим на дубликаты датафрейм
+
         print(f'\nДубликаты в датафрейме: {self.df.duplicated().sum()}')
 
-        # проверим столбец order_id на дубликаты
+        # проверка конкретного столбца или список столбцов 
+
         print(
             f'\nЯвные/неявные дубликаты в столбце/столбцах {cols}: {self.df.duplicated(subset=cols, keep=keep).sum()}'
         )
 
-        # duplicates_check (cols=["order_id", "service_name"])
+    # вызов duplicates_check (cols=["order_id", "service_name"])
+
+    # Метод для перевода строк в нижний регистр
 
     def lower_register(self, cols):
 
-        # приведем к нижнему регистру 'service_name', 'region_name', 'city_name'
+        # приводим столбцы к нижнему регистру
+
         for col in cols:
             self.df[col] = self.df[col].str.lower()
 
         print(f'\nпосле нормализации:')
 
-        # lower_register(cols=['service_name', 'region_name', 'city_name'])
+    # вызов lower_register(cols=['service_name', 'region_name', 'city_name'])
+
+    # метод для вывода данных по дубликатам
+    # по умолчанию keep='first', sort_cols=None, ascending=True
 
     def show_duplicates(
             self,
@@ -226,18 +291,28 @@ class DataProcessor:
             ascending=True
     ):
 
-        # Выведем эти строки
-        print('\nЯвные/неявные дубликаты в столбце/столбцах {cols}:')
+        # Выведем строки
+
+        print(f'\nЯвные/неявные дубликаты в столбце/столбцах {cols}:')
         pd.set_option('display.max_rows', None)
         duplicated_df = self.df[self.df.duplicated(
             subset=cols,
             keep=keep)
         ]
 
+        # Проверка sort_cols на None
+
         if sort_cols is not None:
             duplicated_df.sort_values(sort_cols, ascending=ascending)
         print(duplicated_df)
         return duplicated_df
+
+    # вызов process.show_duplicates(
+    #         cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
+    #         keep=False, sort_cols='user_id')
+
+    # Метод удаляет дубликаты и выводит колиство и долю удаленных строк
+    # По умолчанию sort_cols=None, ascending=True, keep='first'
 
     def delete_duplicates(
             self,
@@ -247,28 +322,27 @@ class DataProcessor:
             keep='first'):
 
         # Зафиксируем начальное количество строк
+
         self.rows_before = self.df.shape[0]
 
         # Удаляем дубликаты
-        self.df = (
-            self.df.sort_values(by='days_since_prev', ascending=False)
-            .drop_duplicates(
-                subset=["user_id", "order_ts", "revenue",
-                        "event_id", "tickets_count"],
-                keep='first'
-            ).sort_index()
-        )
 
         df_processed = self.df
+
+        # Проверка sort_cols на None
 
         if sort_cols is not None:
             df_processed = df_processed.sort_values(
                 by=sort_cols, ascending=ascending)
 
+        # Удаление дубликатов
+
         df_processed = df_processed.drop_duplicates(
             subset=cols,
             keep=keep
         )
+
+        # Возврат сортировки по индексу
 
         if sort_cols is not None:
             df_processed = df_processed.sort_index()
@@ -276,6 +350,7 @@ class DataProcessor:
         self.df = df_processed
 
         # Посчитаем сколько строк удалено
+
         print(
             f'\nКоличество удаленных строк: {self.rows_before - self.df.shape[0]}'
         )
@@ -283,12 +358,23 @@ class DataProcessor:
             f'\nКоличество удаленных строк в процентах: {((self.rows_before - self.df.shape[0]) / self.rows_before):.2%}'
         )
 
+    # вызов delete_duplicates(
+    #     cols=["user_id", "order_ts", "revenue", "event_id", "tickets_count"],
+    #     sort_cols='days_since_prev',
+    #     ascending=False)
+
+    
+    # Метод выводит информацию по столбцам типа obj
+    # по умолчанию cols=None, cols_top_tail=None
+
     def obj_info(self, cols=None, cols_top_tail=None):
 
         # посмотрим на категориальные столбцы
+
         self.df.describe(include='object')
 
         # Проверка количества значенний в данных
+
         if cols is not None:
             for col in cols:
                 print(f'\nколичество {col}:')
@@ -304,14 +390,26 @@ class DataProcessor:
                 print(self.df[col].value_counts().tail(5))
                 print()
 
+    # вызов obj_info(
+    #         cols=['device_type_canonical', 'event_type_main'],
+    #         cols_top_tail=['user_id', 'event_name',
+    #                        'service_name', 'region_name', 'city_name']
+
+    # Вывод информации по числовым данным включая гистограммы и боксплоты
+    # По умолчанию edgecolor='white', color='skyblue' для графиков
+
     def fig_info(self, cols, edgecolor='white', color='skyblue'):
+
+        # перевод строки в список, 
+        # на случай передачи названия одного столбца в виде строки
 
         if isinstance(cols, str):
             cols = [cols]
 
-        # Теперь посмотрим на числовые значения и проверим выбросы, с построением гистограмм и боксплотов
         print('\nИнформация по числовым столбцам:')
         print(self.df.describe())
+
+        # построение гистограмм и боксплотов для каждого переданного столбца
 
         for name in cols:
             fig, (ax_hist, ax_box) = plt.subplots(
@@ -338,12 +436,19 @@ class DataProcessor:
         plt.suptitle(f'\nРаспределение данных в столбцах {cols}')
         plt.show()
 
+    # вызов fig_info(cols=['tickets_count', 'days_since_prev', 'revenue_rub'])
+
+    # Метод для фильтрации по квантилю с 
+    # выводом количества отфильтрованных строк
+
     def filtration(self, cols, quant):
 
         # Зафиксируем количество строк до фильтрации
+
         len_before_filt = self.df.shape[0]
 
-        # Отфильтруем столбец revenue_rub по 99 процентилю
+        # Фильтрация
+
         quantile_quant = self.df[cols].quantile(quant)
         self.df = self.df.loc[self.df[cols] <= quantile_quant]
 
@@ -351,6 +456,11 @@ class DataProcessor:
             f'\nОтфильтровано по {quant} квантилю: {len_before_filt - self.df.shape[0]}')
         print(
             f'\nв процентах: {((len_before_filt - self.df.shape[0]) / len_before_filt):.2%}')
+
+    # вызов filtration(cols='revenue_rub', quant=0.99)
+
+    # Метод для вызова matplot столбчатых диаграмм. 
+    # По умолчанию edgecolor='white', color='skyblue' для графиков
 
     def bar_plot(self, col, edgecolor='white', color='skyblue'):
         plt.figure(figsize=(14, 6))
@@ -369,15 +479,26 @@ class DataProcessor:
         plt.grid(axis='y')
         plt.show()
 
+    # вызов bar_plot(col='tickets_count')
+
+    # Метод для поиска отрицательных и равных нулю значений 
+    # с выводом количества и доли
+
     def neg_revenue_info(self, col):
 
         # разберемся с отрицательной выручкой
+
         print(
             f'\nКоличество отрицательной и нулевой выручки: {self.df.loc[self.df[col] <= 0].shape[0]}'
         )
         print(
             f'\nв процентах: {((self.df.loc[self.df[col] <= 0].shape[0]) / self.df.shape[0]):.4%}'
         )
+
+    # вызов neg_revenue_info(col='revenue_rub')
+
+    # Метод для фильтрации по отрицательным значениям 
+    # с выводом количества и доли отфильтрованных строк
 
     def neg_revenue_filt(self, col):
         self.df = self.df.loc[self.df[col] > 0]
@@ -388,41 +509,72 @@ class DataProcessor:
             f'\nколичество удаленных строк в процентах: {((self.rows_before - self.df.shape[0]) / self.rows_before):.4%}'
         )
 
+    # вызов neg_revenue_filt(col='revenue_rub')
+
+    # Метод для вывода количества строк в предобработаном датафрейме
+
     def cnt_df_after_filt(self):
         print(
             f'\nКоличество строк в предобработанном датафрейме: {self.df.shape[0]}'
         )
-
+    
+    # вызов cnt_df_after_filt()
 
 # СОЗДАНИЕ ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ
 
+    # Метод для создания профиля пользователя 
+    # с возможностью самому именовать столбцы, 
+    # выбирать столбцы для агрегации и функций агрегации 
+    # и добавлять новый бинарный столбец
+    # По умолчанию binary_col_name=None на случай, если бинарный столбец не нужен
+    
     def user_profile_create(
             self,
             sort_cols,
             group_cols,
-            binary_col_name,
             col_for_binary,
+            binary_col_name=None,
             **kwargs
     ):
 
         # Сортируем датафрейм
+    
         df_sorted = self.df.sort_values(sort_cols)
 
         # Создаем профиль
+    
         self.user_profile = df_sorted.groupby(group_cols).agg(
             **{name: (col, op) for name, (col, op) in kwargs.items()}
         )
 
-        # Добавляем бинарный столбец для пользователей сделавших более 2х заказов
-        self.user_profile[binary_col_name] = (
-            self.user_profile[col_for_binary] >= 2
-        ).astype(int)
+        # Добавляем бинарный столбец
+    
+        if binary_col_name is not None:
+            self.user_profile[binary_col_name] = (
+                self.user_profile[col_for_binary] >= 2
+                ).astype(int)
 
         print('\nПрофиль пользователя:')
         print(self.user_profile.head(10))
+    
+    # вызов process.user_profile_create(
+    #         sort_cols='order_ts',
+    #         group_cols='user_id',
+    #         binary_col_name='is_two',
+    #         col_for_binary='total_orders',
+    #         first_order=('order_dt', 'min'),
+    #         last_order=('order_dt', 'max'),
+    #         first_device=('device_type_canonical', 'first'),
+    #         first_region=('region_name', 'first'),
+    #         first_event_type=('event_type_main', 'first'),
+    #         total_orders=('order_id', 'count'),
+    #         avg_revenue=('revenue_rub', 'mean'),
+    #         avg_time_between_orders=('days_since_prev', 'mean')
+    #     )
 
     # Поиск аномалий
-    def anomaly_check(self, mean_col, binary_col, info_cols, edgecolor='white', color='skyblue'):
+    
+    def anomaly_check(self, mean_col, binary_col, info_cols):
 
         print(
             f'\nобщее число пользователей в выборке: {self.user_profile.shape[0]}'
@@ -436,9 +588,15 @@ class DataProcessor:
 
         print(f'\nСтатистические показатели {info_cols}:')
         print(self.user_profile[info_cols].describe())
+    
+    # вызов process.anomaly_check(
+    #         mean_col='avg_revenue',
+    #         binary_col='is_two',
+    #         info_cols=['total_orders', 'avg_time_between_orders']
 
-    # Построим гиcтограммы и боксплоты для статистических данных
-
+    # гиcтограммы и боксплоты для статистических данных 
+    # По умолчанию edgecolor='white', color='skyblue'
+    
     def analytic_hist_box_plot(self, cols, edgecolor='white', color='skyblue'):
         if isinstance(cols, str):
             cols = [cols]
@@ -468,8 +626,13 @@ class DataProcessor:
 
         plt.suptitle(f'\nРаспределение данных в столбцах {cols}')
         plt.show()
+    
+    # вызов analytic_hist_box_plot(
+    #     cols=['total_orders', 'avg_time_between_orders']
 
     # Проверка количества строк для удаления по столбцам и квантилям на выбор пользователя
+    # По умолчанию cols=None, quants=None
+    
     def analytic_before_filt_check(self, cols=None, quants=None):
         cols = cols or []
         quants = quants or []
@@ -478,12 +641,14 @@ class DataProcessor:
             print('\nНе указаны столбцы или квантили для расчета')
 
         # Зафиксируем количество строк до фильтрации
+    
         self.user_before = self.user_profile.shape[0]
         print(
             f'\nКоличество строк до фильтрации df user_profile: {self.user_before}'
         )
 
         # Перебор квантилей и колонок для расчетов, вывод того, что доступно
+    
         for q_val in quants:
             print(f'\n---Расчет для квантиля {q_val} ---')
 
@@ -504,8 +669,14 @@ class DataProcessor:
                     f'\nДоля строк по {col_name} для удаления: {del_share: .2%}'
                 )
                 print()
+    
+    # вызов analytic_before_filt_check(
+    #     cols=['total_orders', 'avg_time_between_orders'],
+    #     quants=[0.99, 0.95]
 
-    # Фильтрация
+    # Фильтрация по квантилям с выводом количества, доли отфильтрованных строк 
+    # и статистических данных после фильтрации для сравнения изменений  
+    
     def analytic_filt(self, cols, quant):
         quantiles = self.user_profile[cols].quantile(quant)
 
@@ -530,15 +701,20 @@ class DataProcessor:
         print()
 
         # изменение после фильтрации
+    
         print('\nизменения после филбтрации:')
         print(self.user_profile.describe())
         print()
+    
+    # вызов analytic_filt(
+    #     cols=['total_orders', 'avg_time_between_orders'], quant=0.99
+    # )
 
 
 # ИССЛЕДОВАТЕЛЬСКИЙ АНАЛИХ ДАННЫХ
 
-    # Распределение пользователей по признакам
-
+    # Распределение пользователей по различным признакам 
+    
     def users_by_cat(self, cols):
         for col in cols:
             print(f'\nКоличество пользователей по {col}:')
@@ -546,8 +722,13 @@ class DataProcessor:
             print(f'\nДоля пользователей по {col}:')
             print((self.user_profile[col].value_counts(
             ) / self.user_profile.shape[0] * 100).round(4))
+    
+    # вызов users_by_cat(
+    #     cols=['first_event_type', 'first_device', 'first_region']
 
-    # Графики распределения по признакам
+    # вывод столбчатых диаграмм для соответствующих данных. 
+    # По умолчанию edgecolor='black'
+    
     def user_cat_bar_plot(self, cols, edgecolor='black'):
         if isinstance(cols, str):
             cols = [cols]
@@ -570,8 +751,15 @@ class DataProcessor:
             plt.tick_params(axis='x', labelrotation=45)
             plt.grid(axis='y'),
             plt.show()
+    
+    # вызов user_cat_bar_plot(
+    #     cols=['first_event_type', 'first_device', 'first_region']
 
-    # Анализ возврата
+    # Метод для расчета количества и долей распределения 
+    # по бинарному признаку с построением столбчатых диаграмм 
+    # и линии общей средней бинарного признака по всем данным. 
+    # По умолчанию edgecolor='black', linecolor='magenta', linestyle='--',linewidth=2
+    
     def return_analysis(
             self,
             binary_col,
@@ -584,6 +772,7 @@ class DataProcessor:
     ):
 
         # Посчитаем долю долю пользователей, совершивших два и более заказа для каждого сегмента.
+    
         print(
             f'\nколичество пользователей, совершивших два и более заказа: {self.user_profile[binary_col].sum()}'
         )
@@ -592,6 +781,7 @@ class DataProcessor:
         )
 
         # Напишем цикл для подсчета долей по сегментам
+    
         for col in cat_cols:
             print(
                 f'\nДоля пользователей, совершивших два и более заказа по {col}:')
@@ -605,6 +795,8 @@ class DataProcessor:
             )
 
         # Сразу создаем графики
+        # перевод в список, если одиночный столбец передан как строка
+    
         if isinstance(cat_cols, str):
             cat_cols = [cat_cols]
 
@@ -614,6 +806,7 @@ class DataProcessor:
             user_share = round((self.user_profile[binary_col].mean() * 100), 4)
 
             # Считаем доли по сегментам
+    
             user_profile_groupped = (
                 self.user_profile.groupby(name)[binary_col]
                 .agg(share=lambda x: x.mean() * 100, count='count')
@@ -621,7 +814,9 @@ class DataProcessor:
                 .reset_index()
             )
 
-            # условие сортировки по count только для региона
+            # условие сортировки по count, на случай если необходимо, 
+            # как в случае с регионами
+    
             if name == cnt_col:
                 user_profile_groupped = user_profile_groupped.sort_values(
                     by='count', ascending=False).head(10)
@@ -638,6 +833,8 @@ class DataProcessor:
                 edgecolor=edgecolor
             )
 
+            # Построение линии с общей долей
+    
             plt.axhline(
                 user_share,
                 color=linecolor,
@@ -646,7 +843,8 @@ class DataProcessor:
                 label=f'общая доля пользователей {user_share}'
             )
 
-            # Настраиваем графики, легенду выносим за график, чтобы не загромождало сам график
+            # Настраиваем графики
+    
             plt.title(f'\nДоля пользователей по {name}')
             plt.xlabel(f'{name}')
             plt.ylabel('\nДоля пользователей (%)')
@@ -657,10 +855,18 @@ class DataProcessor:
 
             plt.grid(axis='y')
             plt.show()
+    
+    # вызов process.return_analysis(
+    #         binary_col='is_two',
+    #         cat_cols=['first_event_type', 'first_device', 'first_region'],
+    #         cnt_col='first_region'
+    #     )
 
 # Проверка продуктовых гипотез
 
     # Гипотеза 1
+    # Сравнение регионов
+    
     def compare_type(self, col, binary_col, name_1, name_2):
         sport_users = self.user_profile.loc[self.user_profile[col]
                                             == name_1][binary_col].mean()
@@ -673,8 +879,18 @@ class DataProcessor:
                   больше у: {compare}
                 ''')
         print()
+    
+    # вызов compare_type(
+    #     col='first_event_type',
+    #     name_1='спорт',
+    #     name_2='концерты',
+    #     binary_col='is_two'
+    # )
 
     # Гипотеза 2
+    # Сравнение регионов с построением столбчатой диаграммы и линии доли 
+    # По умолчанию linecolor='red', linewidth=2, marker='o'
+    
     def compare_region(
             self,
             col,
@@ -697,31 +913,40 @@ class DataProcessor:
             print(region_compare.sort_values(by=sort_col, ascending=False))
 
         # Подготовим данные для графика
+      
         region_compare = region_compare.sort_values(
             by=sort_col, ascending=False).head(20)
 
         # Задаем сетку для графика
+      
         fig, ax1 = plt.subplots(figsize=(12, 6))
 
         # CТроим первый график - столбчатую диаграмму
+      
         ax1.bar(
             data=region_compare,
             x=region_compare.index,
             height=region_compare[agg_func[0]]
         )
+      
         # Настраиваем график
+      
         ax1.set_xlabel(col)
         ax1.set_ylabel('Количество')
         ax1.grid(axis='y')
+      
         # Уберем ошибку Fixed Locator
+      
         ax1.set_xticks(range(len(region_compare.index)))
         ax1.set_xticklabels(region_compare.index, rotation=45,
                             ha='right')  # настриваем подписи оси x
 
         # Создадим вторую ось для долей
+      
         ax2 = ax1.twinx()
 
         # Строим линию долей возврата по регионам
+      
         ax2.plot(
             region_compare.index,
             region_compare[agg_func[1]],
@@ -732,6 +957,7 @@ class DataProcessor:
         )
 
         # Настраиваем подписи и ось для второго графика
+      
         ax2.set_ylabel('Доля', color=linecolor)
         ax2.tick_params(axis='y', labelcolor=linecolor)
 
@@ -739,12 +965,21 @@ class DataProcessor:
         plt.title(f'Сравнение {col} и {agg_func[1]}')
         plt.tight_layout()
         plt.show()
+    
+    # вызов compare_region(
+    #     col='first_region',
+    #     binary_col='is_two',
+    #     agg_func=['count', 'mean'],
+    #     sort_col='count'
+    # ) 
 
-    # Выручка и состав заказа
-
+    # Метод для расчета и построения гистограмм для 
+    # распределения непрерывных значений по бинарному признаку
+    
     def return_revenue(self, col, group_col, agg_list):
 
         # Построим графики плотности распределения для обоих групп
+        
         plt.figure(figsize=(12, 6))
 
         ax = sns.histplot(
@@ -769,13 +1004,24 @@ class DataProcessor:
         plt.show()
 
         # Посчитаем стат данные для обоих групп
+        
         self.user_profile.groupby(group_col)[col].agg(agg_list).round(2)
+    
+    # вызов return_revenue(
+    #     col='avg_revenue',
+    #     group_col='is_two',
+    #     agg_list=['sum', 'min', 'max', 'mean', 'median']
+    # )
 
-    # Временные характеристики
+    # Метод для распределения данных по дням недели с 
+    # построением столбчатой диаграммы с линией доли бинарного признака
 
     def time_char(self, new_col, date_col, binary_col, agg_list, sort_col):
 
         self.user_profile[new_col] = self.user_profile[date_col].dt.day_name()
+
+        # вызов готового для этого случая метода для построения 
+        # столбчатой диаграммы с линией доли бинарного признака 
 
         self.compare_region(
             col=new_col,
@@ -784,7 +1030,17 @@ class DataProcessor:
             sort_col=sort_col
         )
 
-    # Корреляция
+    # вызов time_char(
+    #     new_col='week_day',
+    #     date_col='first_order',
+    #     binary_col='is_two',
+    #     agg_list=['count', 'mean'],
+    #     sort_col='count'
+    # )
+
+    # Метод для подсчета корреляций с выводом тепловой карты 
+    # и графика распределения scatterplot для проверки корреляции
+    
     def corr(self, interval_cols, col, cols_for_scat_plot):
         correlation_matrix = self.user_profile.phik_matrix(
             interval_cols=interval_cols)
@@ -800,6 +1056,7 @@ class DataProcessor:
 
         # Визуализируем полученные данные
         # Строим тепловую карту
+        
         plt.figure(figsize=(2, 6))
 
         data_heatmap = (correlation_matrix.loc[correlation_matrix.index != col]
@@ -811,14 +1068,18 @@ class DataProcessor:
                     cmap='coolwarm',
                     linewidth=0.5
                     )
+        
         # Настраиваем подписи
+        
         plt.title('Тепловая карта коэффициента phi_k \n для {col}')
         plt.xlabel(col)
 
         # выводим тепловую карту
+        
         plt.show()
 
-        # Проверка корреляции
+        # Проверка корреляции, построение scatterplot
+
         fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
         for ax, (name, values) in zip(axes, self.user_profile[cols_for_scat_plot].items()):
@@ -838,8 +1099,17 @@ class DataProcessor:
             plt.suptitle(f'зависимость {col}')
             plt.tight_layout()
             plt.show
+    
+    # вызов corr(
+    #     interval_cols=['total_orders', 'avg_revenue',
+    #                    'avg_time_between_orders'],
+    #     col='total_orders',
+    #     cols_for_scat_plot=['first_order', 'last_order']
+    # )
 
     # Проверка сезонности по исходным данным
+    # с построением столбчатой диаграммы
+    
     def season_check(self, col):
         monthly_orders = self.df.groupby(self.df[col].dt.month_name())[
             col].count().sort_values(ascending=False)
@@ -858,3 +1128,5 @@ class DataProcessor:
         plt.ylabel('Количество заказов')
         plt.tight_layout()
         plt.show()
+
+    # вызов season_check(col='order_dt')
