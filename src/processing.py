@@ -140,7 +140,8 @@ class DataProcessor:
             self,
             new_col,
             revenue_col,
-            nominal, rate,
+            nominal, 
+            rate,
             currency_code,
             code
     ):
@@ -160,8 +161,10 @@ class DataProcessor:
                      rate, new_col]].loc[self.df[currency_code] == code]
         )
 
+    def del_cols(self, del_cols):
+        
         # Удаление столбцов
-        self.df = self.df.drop(columns=[self.tenge_date, nominal, rate, 'cdx'])
+        self.df = self.df.drop(columns=del_cols)
 
         print('\nПроверка после удаления:')
         print(self.df.info())

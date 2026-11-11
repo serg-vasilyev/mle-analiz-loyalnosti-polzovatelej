@@ -61,7 +61,9 @@ def main():
         code='kzt'
     )
 
-    # Проверка провусков
+    # Удаление лишних столбцов
+    process.del_cols(del_cols=['data', 'nominal', 'curs', 'cdx' ])
+    # Проверка пропусков
     process.nulls()
 
     # Оптимизация размерности числовых столбцов
