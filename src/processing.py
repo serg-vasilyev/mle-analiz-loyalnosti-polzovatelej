@@ -899,7 +899,7 @@ class DataProcessor:
             plt.grid(axis='y')
             plt.show()
 
-            return user_share # <- добавлено
+        return user_share # <- добавлено
     
     # вызов process.return_analysis(
     #         binary_col='is_two',
