@@ -128,12 +128,22 @@ def main():
 
     # Вывод информации по столбцам object
     # по умолчанию cols=None, cols_top_tail=None
+
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
     
     process.obj_info(
         cols=['device_type_canonical', 'event_type_main'],
         cols_top_tail=['user_id', 'event_name',
                        'service_name', 'region_name', 'city_name']
     )
+
+    top_cnt = process.obj_info(
+        cols=['device_type_canonical', 'event_type_main'],
+        cols_top_tail=['user_id', 'event_name',
+                       'service_name', 'region_name', 'city_name']
+                       )
+
+    top_city_name = top_cnt['city_name'].index[0]
 
     # Вывод инфо по числовым столбцам с гистограммами и боксплотами
     # edgecolor='white', color='skyblue' по умолчанию для графиков
@@ -166,9 +176,25 @@ def main():
     
     process.cnt_df_after_filt()
 
-    # вывод гистограммы после фильтрации по отрицательным числам
+    # вывод гистограммы после фильтрации по отрицательным числам и 
+    # формирование данных для отчета
+
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
     
-    process.fig_info(cols='revenue_rub')  # edgecolor='white', color='skyblue
+    days_quant, median_dict = process.fig_info(
+        cols=['tickets_count', 'days_since_prev', 'revenue_rub'],
+        plot_col='revenue_rub'
+        ) 
+    days_quant_75 = days_quant['days_since_prev']
+    tickets_median = median_dict['tickets_count'] 
+
+    days_recommendation = (
+        'Так как большинство покупок совершается в течение одного дня,\n'
+        '   можно наладить push рассылки сразу или через несколько часов\n' 
+        '   после сделанного заказа' 
+        if days_quant_75 <= 1 
+        else 'Настроить персонализированные предложения и скидки'
+        ) 
 
     # Создание профиля пользователя
     # По умолчанию binary_col_name=None на случай, если бинарный столбец не нужен
@@ -197,7 +223,7 @@ def main():
     )
 
     # строим гистограмму и boxplot для total_orders, avg_time_between_orders
-     # По умолчанию edgecolor='white', color='skyblue'
+    # По умолчанию edgecolor='white', color='skyblue'
     
     process.analytic_hist_box_plot(
         cols=['total_orders', 'avg_time_between_orders']
@@ -228,9 +254,33 @@ def main():
 
     # Распределение пользователей по признакам
     
-    process.users_by_cat(
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
+
+    cat_stats =  process.users_by_cat(
         cols=['first_event_type', 'first_device', 'first_region']
-    )
+        )
+    
+    top_device_name = cat_stats['first_device'].index[0]
+    top_device_share = cat_stats['first_device'].iloc[0]
+    top_event_name = cat_stats['first_event_type'].index[0]
+    top_event_share = cat_stats['first_event_type'].iloc[0]
+    second_event_name = cat_stats['first_event_type'].index[2]
+    second_event_share = cat_stats['first_event_type'].iloc[2]
+    top_region_name = cat_stats['first_region'].index[0]
+    top_region_share = cat_stats['first_region'].iloc[0]
+
+    device_report = ( 'Мобильное приложение и адаптивную вэб-версию' 
+                     if top_device_share > cat_stats['first_device'].iloc[1] 
+                     else 'ПК версию сайта'
+                     )
+
+    device_recommendation = (
+        'Можно направить усилия на модернизацию или увеличение функционала\n'
+        '   и удобство мобильного приложения или адаптивного под мобильные устройства веб-сервиса' 
+        if top_device_share > cat_stats['first_device'].iloc[1] 
+        else 'Можно направить усилия на модернизацию или увеличение\n' 
+        'функционала и удобство ПК версии сайта'
+        )
 
     # ber_plots
      # По умолчанию edgecolor='black'
@@ -241,8 +291,10 @@ def main():
 
     # Анализ возврата с построением bar plots и линии общей средней
     # По умолчанию edgecolor='black', linecolor='magenta', linestyle='--',linewidth=2
+
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
     
-    process.return_analysis(
+    user_share = process.return_analysis(
         binary_col='is_two',
         cat_cols=['first_event_type', 'first_device', 'first_region'],
         cnt_col='first_region'
@@ -251,40 +303,70 @@ def main():
     # Проверка продуктовых гипотез
     # Гипотеза 1
     
-    process.compare_type(
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
+    
+    event_type = process.compare_type(
         col='first_event_type',
         name_1='спорт',
         name_2='концерты',
         binary_col='is_two'
     )
+
+    event_type_report = 'подтверждается' if event_type == 'спорт' else 'не подтверждается'
     
     # Гипотеза 2
     # По умолчанию linecolor='red', linewidth=2, marker='o'
     
-    process.compare_region(
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
+    
+    region_agg = process.compare_region(
         col='first_region',
         binary_col='is_two',
         agg_func=['count', 'mean'],
         sort_col='count'
     )  
 
-    # Выручка и состав заказа
+    top_region_mean = region_agg['mean'].iloc[0]
+    other_regions = region_agg.iloc[1:]
 
-    process.return_revenue(
+    region_report = (
+        'Подтверждается' 
+        if (top_region_mean > other_regions['mean']).all() 
+        else 'не подтверждается'
+        )   
+
+    # Выручка и состав заказа
+    
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
+
+    return_stat = process.return_revenue(
         col='avg_revenue',
         group_col='is_two',
         agg_list=['sum', 'min', 'max', 'mean', 'median']
     )
 
-    # Временные характеристики
+    median_0 = return_stat.loc[0, 'median']
+    median_1 = return_stat.loc[1, 'median']
+    
+    return_report = 'более' if median_1 > median_0 else 'менее' if median_0 > median_1 else 'такую же'
 
-    process.time_char(
+    # Временные характеристики
+    
+    # !!! Записываем нужные значения для финального отчета в переменные !!!
+
+    day_agg = process.time_char(
         new_col='week_day',
         date_col='first_order',
         binary_col='is_two',
         agg_list=['count', 'mean'],
         sort_col='count'
     )
+
+    day_agg_sorted = day_agg.sort_values(by = 'mean', ascending = False)
+    best_day = day_agg_sorted.index[0]
+    best_day_mean = day_agg_sorted['mean'].iloc[0]
+    second_day = day_agg_sorted. index[1]
+    second_day_mean = day_agg_sorted['mean'].iloc[1]
 
     # Корреляция
 
@@ -302,50 +384,66 @@ def main():
     if sys.platform == 'win32':
         subprocess.run('', shell=True)
 
-    print('''
+    print(f'''
     \033[1;33mОбщие выводы\033[0m
 
  - \033[1;33mПортрет и поведение пользователя:\033[0m
    
-   Подавляющее большиство заказов \033[1;33m(~82,9%)\033[0m совершаются с \033[1;33mмобильных устройств\033[0m. 
-   Это делает мобильное приложение или адаптивную веб версию ключевым "траффиком". 
-   \033[1;33m(~75%)\033[0m повторных покупок совершается в течении одного дня. Обычный размер заказа составляет \033[1;33m2-3 билета\033[0m.
+   Подавляющее большиство заказов \033[1;33m~{top_device_share:}%\033[0m совершаются 
+   с \033[1;33m{top_device_name}\033[0m. 
+   Это делает {device_report} ключевым "траффиком". 
+   
+   \033[1;33m~75% (по 75му процентилю)\033[0m повторных покупок совершается 
+   в течении \033[1;33m{days_quant_75} дня / дней \033[0m. 
+   Обычный размер заказа составляет \033[1;33m{tickets_median} билета\033[0m.
  
  - \033[1;33mТочки входа и лидеры категорий:\033[0m
    
-   Главным типом мероприятия для привлечения клиентов выступают \033[1;33mконцерты (~44.7% первых заказов)\033[0m 
-   и \033[1;33mтеатры (19.8%)\033[0m. Лидером среди регионов является \033[1;33mКаменевский регион\033[0m, 
-   среди городов - \033[1;33mГлиногорск\033[0m
+   Главным типом мероприятия для привлечения клиентов выступают 
+   \033[1;33m{top_event_name} (~{top_event_share:}% первых заказов)\033[0m 
+   и \033[1;33m{second_event_name} (~{second_event_share})%\033[0m. 
+   Лидером среди регионов является \033[1;33m{top_region_name}\033[0m, 
+   среди городов - \033[1;33m{top_city_name}\033[0m
  
  - \033[1;33mУдержание и выручка:\033[0m
    
-   Общая доля пользователей, совершивших 2 и более заказа, составляет около \033[1;33m61.07%\033[0m. 
-   Лояльные клиенты генерируют более стабильную и высокую медианную выручку 
-   (медиана \033[1;33m503.16 руб\033[0m. против \033[1;33m388.81 руб.\033[0m у новичков)
+   Общая доля пользователей, совершивших 2 и более заказа, 
+   составляет около \033[1;33m{user_share}%\033[0m. 
+   Лояльные клиенты генерируют {return_report} высокую медианную выручку 
+   (медиана \033[1;33m{median_1} руб\033[0m. 
+   против \033[1;33m{median_0} руб.\033[0m у новичков)
  
  - \033[1;33mВлияние дней недели:\033[0m
    
-   Наибольшая вероятность возврата за повторной покупкой приходится на \033[1;33mсубботу и понедельник (около 62.5%)\033[0m. 
+   Наибольшая вероятность возврата за повторной покупкой 
+   приходится на \033[1;33m{best_day} (~{best_day_mean:.2f}%) 
+   и {second_day} (~{second_day_mean:.2f}%\033[0m. 
  
- - \033[1;33mОпровержение гипотез:\033[0m
+ - \033[1;33mРезультаты проверки гипотез:\033[0m
    
-   Продуктовые гипотезы \033[1;33mне подтвердились\033[0m. Возвратов больше у тех кто первый раз оформил заказ на концерты. 
-   Доля возвратов с увеличением активности увеличивается - \033[1;33mне подтверждается)\033[0m
+   Продуктовые гипотезы: 
+   
+   Гипотеза 1 - \033[1;33m{event_type_report}\033[0m. 
+   Возвратов больше у тех кто первый раз оформил заказ на \033[1;33m{event_type}\033[0m. 
+   
+   Гипотеза 2 - Доля возвратов с увеличением активности увеличивается - 
+   \033[1;33m{region_report}\033[0m
 
     \033[1;33mРекомендации\033[0m
 
- - Поскольку  подавляющее большиство заказов \033[1;33m(~82,9%)\033[0m совершаются с \033[1;33mмобильных устройств\033[0m. 
-   Можно направить усилия на модернизацию или увеличение функционала и удобство мобильного приложения 
-   или адаптивного под мобильные устройства веб-сервиса
+ - Поскольку  подавляющее большиство заказов \033[1;33m{top_device_share:}%\033[0m 
+   совершаются с \033[1;33m{top_device_name}\033[0m. 
+   {device_recommendation}
 
- - Так как большинство покупок совершается в течение одного дня можно наладить push рассылки сразу 
-   или через несколько часов после сделанного заказа
+ - {days_recommendation}
 
- - Сделать упор в рекламных кампаниях на концерты и спектакли в театрах
+ - Сделать упор в рекламных кампаниях на \033[1;33m{top_event_name}\033[0m и 
+   \033[1;33m{second_event_name}\033[0m
 
- - Увеличить интенсивность рекламных рассылок в пятницу вечером, субботу и понедельник, 
-   это дни когда люди склонны возвращаться.
-''')
+ - Увеличить интенсивность рекламных рассылок в \033[1;33m{best_day}\033[0m и 
+   \033[1;33m{second_day}\033[0m, это дни когда люди склонны возвращаться.
+'''
+)
     
 # вызов функции:
 if __name__ == "__main__":
