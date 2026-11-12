@@ -305,6 +305,7 @@ class DataProcessor:
         if sort_cols is not None:
             duplicated_df.sort_values(sort_cols, ascending=ascending)
         print(duplicated_df)
+        
         return duplicated_df
 
     # вызов process.show_duplicates(
@@ -371,9 +372,13 @@ class DataProcessor:
 
         # посмотрим на категориальные столбцы
 
+        # !!! изменено, добавлена запись полученных значений в словарь
+        #     Для дальнейшего использование в отчете !!!
+
         self.df.describe(include='object')
 
         # Проверка количества значенний в данных
+        top_rating = {} # <- добавлено
 
         if cols is not None:
             for col in cols:
@@ -383,12 +388,17 @@ class DataProcessor:
 
         if cols_top_tail is not None:
             for col in cols_top_tail:
+                cnt = self.df[col].value_counts().head(10) # <- добавлено
+                top_rating[col] = cnt # <- добавлено
                 print(f'\nтоп 10 {col}:')
-                print(self.df[col].value_counts().head(10))
+                print(cnt)
                 print()
                 print(f'\nпоследние 5 {col}:')
                 print(self.df[col].value_counts().tail(5))
                 print()
+           
+            return top_rating  # <- добавлено
+            
 
     # вызов obj_info(
     #         cols=['device_type_canonical', 'event_type_main'],
@@ -396,9 +406,14 @@ class DataProcessor:
     #                        'service_name', 'region_name', 'city_name']
 
     # Вывод информации по числовым данным включая гистограммы и боксплоты
-    # По умолчанию edgecolor='white', color='skyblue' для графиков
+    # По умолчанию plot_col=None, edgecolor='white', color='skyblue' для графиков
 
-    def fig_info(self, cols, edgecolor='white', color='skyblue'):
+    # !!! изменено, добавлена запись полученных значений в словарь
+    #     Для дальнейшего использование в отчете !!!
+
+    def fig_info(self, cols, plot_col=None, edgecolor='white', color='skyblue'):
+        orders_quant = {} # <- добавлено
+        median_dict = {} # <- добавлено
 
         # перевод строки в список, 
         # на случай передачи названия одного столбца в виде строки
@@ -406,12 +421,24 @@ class DataProcessor:
         if isinstance(cols, str):
             cols = [cols]
 
+        if isinstance(plot_col, str):
+            plot_col = [plot_col]
+
         print('\nИнформация по числовым столбцам:')
         print(self.df.describe())
 
         # построение гистограмм и боксплотов для каждого переданного столбца
 
         for name in cols:
+            
+            days_75 = round(self.df[name].quantile(0.75), 2) # <- добавлено
+            orders_quant[name] = days_75 # <- добавлено
+            median = self.df[name].median() # <- добавлено
+            median_dict[name] = median # <- добавлено
+
+            if plot_col is not None and name not in plot_col:
+                continue
+
             fig, (ax_hist, ax_box) = plt.subplots(
                 1, 2, figsize=(14, 6), constrained_layout=True
             )
@@ -435,6 +462,8 @@ class DataProcessor:
 
         plt.suptitle(f'\nРаспределение данных в столбцах {cols}')
         plt.show()
+
+        return orders_quant, median_dict # <- добавлено
 
     # вызов fig_info(cols=['tickets_count', 'days_since_prev', 'revenue_rub'])
 
@@ -714,14 +743,25 @@ class DataProcessor:
 # ИССЛЕДОВАТЕЛЬСКИЙ АНАЛИХ ДАННЫХ
 
     # Распределение пользователей по различным признакам 
+
+    #  !!! изменено, добавлена запись полученных значений в словарь
+    #      Для дальнейшего использование в отчете !!! 
     
-    def users_by_cat(self, cols):
+    def users_by_cat(self, cols):   # <- изменено, добавлен возврат полученн 
+        user_result = {} # <- добавлено
+       
         for col in cols:
+            user_share = (self.user_profile[col].value_counts() 
+                          / self.user_profile.shape[0] * 100).round(2) # <- добавлено
+            
+            user_result[col] = user_share # <- добавлено
+
             print(f'\nКоличество пользователей по {col}:')
             print(self.user_profile[col].value_counts())
             print(f'\nДоля пользователей по {col}:')
-            print((self.user_profile[col].value_counts(
-            ) / self.user_profile.shape[0] * 100).round(4))
+            print(user_share)
+            
+        return user_result # <- добавлено
     
     # вызов users_by_cat(
     #     cols=['first_event_type', 'first_device', 'first_region']
@@ -759,6 +799,9 @@ class DataProcessor:
     # по бинарному признаку с построением столбчатых диаграмм 
     # и линии общей средней бинарного признака по всем данным. 
     # По умолчанию edgecolor='black', linecolor='magenta', linestyle='--',linewidth=2
+
+    #  !!! изменено, добавлена запись полученных значений в словарь
+    #      Для дальнейшего использование в отчете !!! 
     
     def return_analysis(
             self,
@@ -803,7 +846,7 @@ class DataProcessor:
         for name in cat_cols:
             plt.figure(figsize=(14, 6), constrained_layout=True)
 
-            user_share = round((self.user_profile[binary_col].mean() * 100), 4)
+            user_share = round((self.user_profile[binary_col].mean() * 100), 2)
 
             # Считаем доли по сегментам
     
@@ -855,6 +898,8 @@ class DataProcessor:
 
             plt.grid(axis='y')
             plt.show()
+
+            return user_share # <- добавлено
     
     # вызов process.return_analysis(
     #         binary_col='is_two',
@@ -866,6 +911,9 @@ class DataProcessor:
 
     # Гипотеза 1
     # Сравнение регионов
+
+    #  !!! изменено, добавлена запись полученных значений в словарь
+        #      Для дальнейшего использование в отчете !!! 
     
     def compare_type(self, col, binary_col, name_1, name_2):
         sport_users = self.user_profile.loc[self.user_profile[col]
@@ -879,6 +927,8 @@ class DataProcessor:
                   больше у: {compare}
                 ''')
         print()
+
+        return compare # <- добавлено
     
     # вызов compare_type(
     #     col='first_event_type',
@@ -890,6 +940,9 @@ class DataProcessor:
     # Гипотеза 2
     # Сравнение регионов с построением столбчатой диаграммы и линии доли 
     # По умолчанию linecolor='red', linewidth=2, marker='o'
+
+    #  !!! изменено, добавлена запись полученных значений в словарь
+        #      Для дальнейшего использование в отчете !!! 
     
     def compare_region(
             self,
@@ -904,18 +957,20 @@ class DataProcessor:
 
         region_compare = self.user_profile.groupby(
             col)[binary_col].agg(agg_func)
+        
         if 'mean' in agg_func:
             region_compare['mean'] = region_compare['mean'] * 100
+            region_compare_sort = region_compare.sort_values(by=sort_col, ascending=False) # <- добавлено
             print(f'\n{agg_func} по {col}:')
-            print(region_compare.sort_values(by=sort_col, ascending=False))
+            print(region_compare_sort)
         else:
+            region_compare_sort = region_compare.sort_values(by=sort_col, ascending=False) # <- добавлено
             print(f'\n{agg_func} по {col}:')
-            print(region_compare.sort_values(by=sort_col, ascending=False))
+            print(region_compare_sort)
 
         # Подготовим данные для графика
       
-        region_compare = region_compare.sort_values(
-            by=sort_col, ascending=False).head(20)
+        region_compare = region_compare_sort.head(20)
 
         # Задаем сетку для графика
       
@@ -965,6 +1020,8 @@ class DataProcessor:
         plt.title(f'Сравнение {col} и {agg_func[1]}')
         plt.tight_layout()
         plt.show()
+
+        return region_compare_sort # <- добавлено
     
     # вызов compare_region(
     #     col='first_region',
@@ -975,6 +1032,9 @@ class DataProcessor:
 
     # Метод для расчета и построения гистограмм для 
     # распределения непрерывных значений по бинарному признаку
+
+    #  !!! изменено, добавлена запись полученных значений в словарь
+    #      Для дальнейшего использование в отчете !!! 
     
     def return_revenue(self, col, group_col, agg_list):
 
@@ -1005,7 +1065,11 @@ class DataProcessor:
 
         # Посчитаем стат данные для обоих групп
         
-        self.user_profile.groupby(group_col)[col].agg(agg_list).round(2)
+        return_stat = self.user_profile.groupby(group_col)[col].agg(agg_list).round(2) # <- добавлено
+        print('Статистика возврата:')
+        print(return_stat)
+
+        return return_stat # <- добавлено
     
     # вызов return_revenue(
     #     col='avg_revenue',
@@ -1023,7 +1087,7 @@ class DataProcessor:
         # вызов готового для этого случая метода для построения 
         # столбчатой диаграммы с линией доли бинарного признака 
 
-        self.compare_region(
+        return self.compare_region(
             col=new_col,
             binary_col=binary_col,
             agg_func=agg_list,
