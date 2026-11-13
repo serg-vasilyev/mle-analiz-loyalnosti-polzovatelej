@@ -1,4 +1,4 @@
-# mle-analiz-loyalnosti-polzovatelej
+# Yandex afisha user loyalty analysis
 
 ## ОПИСАНИЕ ПРОЕКТА
 
